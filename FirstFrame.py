@@ -3,6 +3,7 @@ import tkinter as tk
 from itertools import combinations
 import os
 import random
+import threading
 
 class SampleSelectionSystem(tk.Frame):
     def __init__(self, parent, controller):
@@ -146,6 +147,7 @@ class SampleSelectionSystem(tk.Frame):
         return k_groups_chosen
 
     def execute_action(self):
+        # Start a new thread to handle the long-running task
         if self.radio_selection.get() == "input":
             self.value_input_listbox.delete(0, tk.END)
             for i, entry in enumerate(self.user_input_entries, start=1):
@@ -174,11 +176,15 @@ class SampleSelectionSystem(tk.Frame):
         elif self.radio_selection.get() == "random":
             m = int(self.entries['m'].get())
             n = int(self.entries['n'].get())
-            samples = list(combinations(range(m), n))
+            samples = list(range(1, m + 1))  # Generate a list from 1 to m
+            random_combination = random.sample(samples, n)
+            index = len(random_combination)
+            for index in range(1,index):
+                self.value_input_listbox.insert(tk.END, f"{index}st #: {random_combination[index]}")
             k = int(self.entries['k'].get())
             j = int(self.entries['j'].get())
             s = int(self.entries['s'].get())
-            self.chosen_groups = self.find_optimal_k_groups(samples, k, j, s)
+            self.chosen_groups = self.find_optimal_k_groups(random_combination, k, j, s)
 
             self.results_listbox.delete(0, tk.END)
             for i, group in enumerate(self.chosen_groups, start=1):

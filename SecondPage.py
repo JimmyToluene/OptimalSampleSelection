@@ -64,7 +64,7 @@ class SecondPage(tk.Frame):
 
     def setup_filelist_widget(self):
         self.file_frame = Frame(self)
-        self.file_frame.pack(side=tk.LEFT, fill=tk.BOTH , padx=70)
+        self.file_frame.place(x=350,y=230,anchor="center")
         self.add_new_column()
 
     def add_new_column(self):
