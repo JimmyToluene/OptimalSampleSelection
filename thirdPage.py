@@ -17,7 +17,7 @@ class ThirdPage(tk.Frame):
         label.pack(pady=20)
 
         # Options for filter methods
-        filters = ["Method 1", "Method 2", "Method 3"]
+        filters = ["Define positions and numbers", "Define positions and range of numbers", "Select positions as fixed numbers"]
         for method in filters:
             Radiobutton(self, text=method, variable=self.filter_var, value=method).pack()
 
@@ -30,11 +30,11 @@ class ThirdPage(tk.Frame):
 
     def go_next(self):
         selected_filter = self.filter_var.get()
-        if selected_filter == "Method 1":
+        if selected_filter == "Define positions and numbers":
             self.controller.show_frame("Page4")
-        elif selected_filter == "Method 2":
+        elif selected_filter == "Define positions and range of numbers":
             self.controller.show_frame("Page5")
-        elif selected_filter == "Method 3":
+        elif selected_filter == "Select positions as fixed numbers":
             self.controller.show_frame("Page6")
         else:
             tk.messagebox.showerror("Selection Error", "Please select a filter method before proceeding.")
