@@ -8,6 +8,7 @@ import threading
 class SampleSelectionSystem(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
+        self.random_combination = None
         self.controller = controller
         self.parameters_info = {
             'm': "45<=m<=54",
@@ -54,7 +55,7 @@ class SampleSelectionSystem(tk.Frame):
         label.pack(side=tk.LEFT)
         entry = Entry(frame, width=5)
         entry.pack(side=tk.LEFT, padx=(5, 2))
-        additional_text = Label(frame, text=additional_info, font=("Arial", 10), fg="black")
+        additional_text = Label(frame, text=additional_info, font=("Arial", 10))
         additional_text.pack(side=tk.LEFT)
         return entry
 
@@ -174,21 +175,24 @@ class SampleSelectionSystem(tk.Frame):
                 print("Error:", str(e))
 
         elif self.radio_selection.get() == "random":
+            self.value_input_listbox.delete(0, tk.END)
             m = int(self.entries['m'].get())
             n = int(self.entries['n'].get())
             samples = list(range(1, m + 1))  # Generate a list from 1 to m
-            random_combination = random.sample(samples, n)
-            index = len(random_combination)
-            for index in range(1,index):
-                self.value_input_listbox.insert(tk.END, f"{index}st #: {random_combination[index]}")
+            self.random_combination = random.sample(samples, n)
+            self.random_combination.sort()
+
+            index = len(self.random_combination)
+            for index in range(0,index):
+                self.value_input_listbox.insert(tk.END, f"{index+1}st #: {self.random_combination[index]}")
             k = int(self.entries['k'].get())
             j = int(self.entries['j'].get())
             s = int(self.entries['s'].get())
-            self.chosen_groups = self.find_optimal_k_groups(random_combination, k, j, s)
+            self.chosen_groups = self.find_optimal_k_groups(self.random_combination, k, j, s)
 
             self.results_listbox.delete(0, tk.END)
             for i, group in enumerate(self.chosen_groups, start=1):
-                self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
+                self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, group))})")
             self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{len(samples)}-{len(self.chosen_groups)}"
             self.results_listbox.insert(tk.END, self.summary_text)
 
@@ -208,6 +212,7 @@ class SampleSelectionSystem(tk.Frame):
 
         try:
             with open(file_path, "w") as file:
+                file.write(f"({', '.join(map(str, self.random_combination))})\n")
                 for line in self.chosen_groups:
                     file.write(f"({', '.join(map(str, line))})\n")
                 file.write(self.summary_text)

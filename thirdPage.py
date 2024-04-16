@@ -16,17 +16,16 @@ class ThirdPage(tk.Frame):
         label = Label(self, text="Please select the filter method:", font=("Arial", 27))
         label.pack(pady=20)
 
-        # Options for filter methods
         filters = ["Define positions and numbers", "Define positions and range of numbers", "Select positions as fixed numbers"]
         for method in filters:
-            Radiobutton(self, text=method, variable=self.filter_var, value=method).pack()
+            Radiobutton(self, text=method, font=("Arial", 20),variable=self.filter_var, value=method).pack()
 
         # Button to go to the next appropriate page
-        next_button = Button(self, text="Next", command=self.go_next)
-        next_button.pack(pady=20)
+        next_button = Button(self, text="Next", command=self.go_next,)
+        next_button.pack(side=tk.RIGHT,padx=(0,200))
         back_button = tk.Button(self, text="Previous",
                                 command=lambda: controller.show_frame("SecondPage"))
-        back_button.pack()
+        back_button.pack(side=tk.RIGHT,padx=20)
 
     def go_next(self):
         selected_filter = self.filter_var.get()

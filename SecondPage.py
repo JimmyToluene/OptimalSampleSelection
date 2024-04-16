@@ -41,9 +41,13 @@ class SecondPage(tk.Frame):
         self.value_input_listbox.delete(0, tk.END)
         # Simulate processing; real implementation depends on file format and desired processing
         entries = content.split('\n')
-        for i, entry in enumerate(entries, start=1):
+        self.value_input_listbox.insert(tk.END, f"      Input n number array is {entries[0]}")
+        for i, entry in enumerate(entries[1:], start=1):
+            if entry == entries[-1]:
+                self.value_input_listbox.insert(tk.END, f"{entries[-1]}")
+                break
             if entry.strip():
-                self.value_input_listbox.insert(tk.END, f"{i}st line: {entry}")
+                self.value_input_listbox.insert(tk.END, f"{i}        {entry}")
 
     def setup_action_buttons(self, parent_frame):
         action_frame = Frame(parent_frame)
