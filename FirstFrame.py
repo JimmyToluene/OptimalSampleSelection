@@ -1,24 +1,13 @@
-import tkinter as tk
 from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar, Radiobutton
+import tkinter as tk
 from itertools import combinations
-import random
 import os
+import random
 
-
-class SampleSelectionSystem:
+class SampleSelectionSystem(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        super().__init__(parent)
         self.controller = controller
-        self.init_ui()
-
-    def __init__(self, master):
-        self.value_input_listbox = None
-        self.results_listbox = None
-        self.master = master
-        self.master.title("Sample Selection System")
-        self.master.geometry("1100x600")
-
-
         self.parameters_info = {
             'm': "45<=m<=54",
             'n': "7<=n<=25",
@@ -26,46 +15,36 @@ class SampleSelectionSystem:
             'j': "s<=j<=k",
             's': "3<=s<=7"
         }
-
-        self.user_input_entries = []  # Initialize user_input_entries as an instance attribute
         self.entries = {}
+        self.user_input_entries = []
         self.radio_selection = tk.StringVar(value="input")
-        self.database_frame = Frame(self.master)
-
         self.init_ui()
 
     def init_ui(self):
-        root = Frame(self.master)
-        root.pack(expand=False, fill="both")
-
-
-        message_label = Label(root, text="An Optimal Sample Selection System", font=("Arial", 32))
+        message_label = Label(self, text="An Optimal Sample Selection System", font=("Arial", 32))
         message_label.pack(pady=(20, 0))
 
-        line_frames = [Frame(root) for _ in range(3)]
-        for frame in line_frames:
+        # Initialize UI elements
+        line_frames = [Frame(self) for _ in range(3)]
+        for i, frame in enumerate(line_frames):
             frame.pack(fill='x', padx=20, pady=5)
 
-        instruction_label = Label(line_frames[0], text="Please input the following parameters:", font=("Arial", 10),
-                                  anchor="w")
-        instruction_label.pack(fill='x', padx=20, pady=5)
-
+        # Setup input fields
         for i, param in enumerate(['m', 'n']):
             self.entries[param] = self.create_input_field(line_frames[1], param, self.parameters_info[param])
         for param in ['k', 'j', 's']:
             self.entries[param] = self.create_input_field(line_frames[2], param, self.parameters_info[param])
 
-        button_frame = tk.Frame(root)
-        button_frame.pack(fill='x', padx=20, pady=(10, 5))
-
-        parent_frame = Frame(root)
+        button_frame = Frame(self)
+        button_frame.pack(fill='x', padx=20, pady=10)
+        parent_frame = Frame(self)
         parent_frame.pack(fill='x', padx=20, pady=(10, 5))
 
         self.setup_radio_buttons(button_frame)
         self.setup_action_buttons(button_frame)
         self.user_input_entry(parent_frame)
         self.update_entry_states()
-        self.setup_listbox_frame(root)
+        self.setup_listbox_frame(self)
 
     def create_input_field(self, parent, parameter_name, additional_info):
         frame = Frame(parent)
@@ -81,30 +60,24 @@ class SampleSelectionSystem:
     def setup_radio_buttons(self, parent_frame):
         radio_frame = Frame(parent_frame)
         radio_frame.pack(side=tk.LEFT, expand=True, fill='both')
-        Radiobutton(radio_frame, text="Random n", variable=self.radio_selection, value="random",
-                    font=("Arial", 10), command=self.update_entry_states).pack(side=tk.LEFT, padx=(10, 20))
-        Radiobutton(radio_frame, text="Input n", variable=self.radio_selection, value="input",
-                    font=("Arial", 10), command=self.update_entry_states).pack(side=tk.LEFT, padx=(0, 20))
+        Radiobutton(radio_frame, text="Random n", variable=self.radio_selection, value="random", font=("Arial", 10), command=self.update_entry_states).pack(side=tk.LEFT, padx=(10, 20))
+        Radiobutton(radio_frame, text="Input n", variable=self.radio_selection, value="input", font=("Arial", 10), command=self.update_entry_states).pack(side=tk.LEFT, padx=(0, 20))
 
     def setup_action_buttons(self, parent_frame):
         action_frame = Frame(parent_frame)
         action_frame.pack(side=tk.LEFT, expand=True, fill='both')
-        Button(action_frame, text="Store DB", font=("Arial", 10), command=self.save_results).pack(side=tk.LEFT,
-                                                                                                  padx=(10, 20))
-        Button(action_frame, text="Execute", font=("Arial", 10), command=self.execute_action).pack(side=tk.LEFT,
-                                                                                                   padx=(0, 20))
+        Button(action_frame, text="Store DB", font=("Arial", 10), command=self.save_results).pack(side=tk.LEFT, padx=(10, 20))
+        Button(action_frame, text="Execute", font=("Arial", 10), command=self.execute_action).pack(side=tk.LEFT, padx=(0, 20))
         Button(action_frame, text="Delete", font=("Arial", 10)).pack(side=tk.LEFT, padx=(0, 20))
 
     def user_input_entry(self, parent_frame):
-        user_input_frame = tk.Frame(parent_frame)
-        user_input_frame.pack(fill='x', padx=20, pady=(10, 5))
         for i in range(1, 26):
-            entry = tk.Entry(user_input_frame, width=3)  # Entries start as disabled
-            entry.grid(row=0, column=i, padx=0)
+            entry = Entry(parent_frame, width=3)
+            entry.grid(row=0, column=i, padx=2)
             entry.config(state="disabled")
             self.user_input_entries.append(entry)
-            label = tk.Label(user_input_frame, text=str(i), font=("Arial", 8))
-            label.grid(row=1, column=i, padx=0)
+            label = Label(parent_frame, text=str(i), font=("Arial", 8))
+            label.grid(row=1, column=i)
 
     def update_entry_states(self):
         state = "normal" if self.radio_selection.get() == "input" else "disabled"
@@ -113,7 +86,6 @@ class SampleSelectionSystem:
         entries_state = "disabled" if self.radio_selection.get() == "input" else "normal"
         self.entries['m'].config(state=entries_state)
         self.entries['n'].config(state=entries_state)
-
     def setup_listbox_frame(self, root):
         listbox_frame = Frame(root)
         listbox_frame.pack(fill='both', expand=True, padx=20, pady=10)
@@ -142,9 +114,8 @@ class SampleSelectionSystem:
         buttons_frame.pack(side=tk.LEFT, padx=(10, 0))
         print_button = Button(buttons_frame, text="Print", font=("Arial", 10))
         print_button.pack(pady=(0, 10))
-        next_button = Button(buttons_frame, text="Next", font=("Arial", 10), command=self.next_frame)
+        next_button = Button(buttons_frame, text="Next", font=("Arial", 10), command=lambda: self.controller.show_frame("SecondPage"))
         next_button.pack()
-
     def find_optimal_k_groups(self,samples, k, j, s):
         k_groups = list(combinations(samples, k))
         j_groups = list(combinations(samples, j))
@@ -237,15 +208,3 @@ class SampleSelectionSystem:
             messagebox.showinfo("Success", f"Results successfully saved to file: {file_path}")
         except IOError as e:
             messagebox.showerror("Failure", f"Error saving file: {str(e)}")
-
-    def next_frame(self,):
-
-        pass
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.title("Sample Selection System")
-    root.geometry("1100x600")
-    app = SampleSelectionSystem(root)
-    root.mainloop()
