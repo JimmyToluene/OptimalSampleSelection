@@ -41,7 +41,7 @@ class SecondPage(tk.Frame):
         self.value_input_listbox.delete(0, tk.END)
         # Simulate processing; real implementation depends on file format and desired processing
         entries = content.split('\n')
-        self.value_input_listbox.insert(tk.END, f"      Input n number array is {entries[0]}")
+        self.value_input_listbox.insert(tk.END, f"Input n number array is {entries[0]}")
         for i, entry in enumerate(entries[1:], start=1):
             if entry == entries[-1]:
                 self.value_input_listbox.insert(tk.END, f"{entries[-1]}")
