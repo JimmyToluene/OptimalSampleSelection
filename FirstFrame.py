@@ -139,16 +139,20 @@ class SampleSelectionSystem(tk.Frame):
             max_score = k_group_score[best_k_group]
             best_k_groups = [k for (k, v) in k_group_score.items() if v == max_score]
             rand_best_k_group = random.choice(best_k_groups)
+
+            rand_best_k_group = best_k_groups[0]
             j_groups = set(j_groups).difference(k_group_cover_list[rand_best_k_group])
 
             k_group_score.pop(rand_best_k_group)
             k_groups.remove(rand_best_k_group)
             k_groups_chosen.append(rand_best_k_group)
 
+
         return k_groups_chosen
 
     def execute_action(self):
-        # Start a new thread to handle the long-running task
+        running_index = 0
+        running_index = running_index+1
         if self.radio_selection.get() == "input":
             self.value_input_listbox.delete(0, tk.END)
             for i, entry in enumerate(self.user_input_entries, start=1):
@@ -169,7 +173,7 @@ class SampleSelectionSystem(tk.Frame):
                 self.results_listbox.delete(0, tk.END)
                 for i, group in enumerate(self.chosen_groups, start=1):
                     self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
-                self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{len(samples)}-{len(self.chosen_groups)}"
+                self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
                 self.results_listbox.insert(tk.END, self.summary_text)
             except Exception as e:
                 print("Error:", str(e))
@@ -193,7 +197,7 @@ class SampleSelectionSystem(tk.Frame):
             self.results_listbox.delete(0, tk.END)
             for i, group in enumerate(self.chosen_groups, start=1):
                 self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, group))})")
-            self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{len(samples)}-{len(self.chosen_groups)}"
+            self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
             self.results_listbox.insert(tk.END, self.summary_text)
 
     def save_results(self):
@@ -217,5 +221,6 @@ class SampleSelectionSystem(tk.Frame):
                     file.write(f"({', '.join(map(str, line))})\n")
                 file.write(self.summary_text)
             messagebox.showinfo("Success", f"Results successfully saved to file: {file_path}")
+            os.startfile(f"{self.summary_text}.txt", "print")
         except IOError as e:
             messagebox.showerror("Failure", f"Error saving file: {str(e)}")
