@@ -4,6 +4,7 @@ from itertools import combinations
 import os
 import random
 import threading
+import time
 
 class SampleSelectionSystem(tk.Frame):
     def __init__(self, parent, controller):
@@ -119,8 +120,11 @@ class SampleSelectionSystem(tk.Frame):
         next_button = Button(buttons_frame, text="Next", font=("Arial", 10), command=lambda: self.controller.show_frame("SecondPage"))
         next_button.pack()
     def find_optimal_k_groups(self,samples, k, j, s):
+        begin = time.time()
         k_groups = list(combinations(samples, k))
         j_groups = list(combinations(samples, j))
+        end = time.time()
+        print(end - begin)
 
         k_groups_chosen = []
         k_group_score = {}

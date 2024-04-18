@@ -1,41 +1,43 @@
 from itertools import combinations
 import random
+import time
 
-samples = [1, 2, 3, 4, 5, 6, 7]
+samples = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 k = 6  # Size of groups to form
 j = 5
-s = 5  # Size of combinations to be covered
+s = 4  # Size of combinations to be covered
 
-k_groups = list(combinations(samples, k))
+class KGroup(tuple):
+    score = 0
+    cover = []
+
 j_groups = list(combinations(samples, j))
+k_groups = [KGroup(k) for k in list(combinations(samples, k))]
 
 k_groups_chosen = list()
-k_group_score = dict() 
-k_group_cover_list = dict(list())
 
 while j_groups:
-    # Step 1: For each k_group, calculate its score
+    best_score = -1
+    best_k_group = None
     for k_group in k_groups:
-        k_group_score[k_group] = 0
-        k_group_cover_list[k_group] = list() 
+        k_group.score = 0
+        k_group.cover = []
         for j_group in j_groups:
             # if the size of intersection >= s
-            if len(set(j_group).intersection(k_group)) >= s:
-                k_group_score[k_group] += 1
-                k_group_cover_list[k_group].append(j_group)
+            interesc = set(j_group).intersection(k_group) 
+            if len(interesc) >= s:
+                k_group.score += 1
+                k_group.cover.append(j_group)
+        if k_group.score > best_score:
+            best_score = k_group.score
+            best_k_group = k_group
 
-    # Step 2: Select the group with the max score and mark those covered
-    best_k_group = max(k_group_score, key=k_group_score.get)
-    max_score = k_group_score[best_k_group]
-    best_k_groups = [k for (k, v) in k_group_score.items() if v == max_score]
-    rand_best_k_group = random.choice(best_k_groups)
-    # Remove j_group the are covered
-    j_groups = set(j_groups).difference(k_group_cover_list[rand_best_k_group])
+    for cover in best_k_group.cover:
+        j_groups.remove(cover)
 
-    k_group_score.pop(rand_best_k_group)
-    k_groups.remove(rand_best_k_group)
-    k_groups_chosen.append(rand_best_k_group)
+    k_groups_chosen.append(best_k_group)
+    k_groups.remove(best_k_group)
 
 print(*k_groups_chosen, sep='\n')
 
