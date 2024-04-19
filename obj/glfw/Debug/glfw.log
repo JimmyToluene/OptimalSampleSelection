@@ -1,0 +1,39 @@
+﻿  cocoa_time.c
+  context.c
+  egl_context.c
+  glx_context.c
+  init.c
+  input.c
+  linux_joystick.c
+  monitor.c
+  null_init.c
+  null_joystick.c
+  null_monitor.c
+  null_window.c
+  osmesa_context.c
+  platform.c
+  posix_module.c
+  posix_poll.c
+  posix_thread.c
+  posix_time.c
+  vulkan.c
+  wgl_context.c
+  Generating Code...
+  Compiling...
+  win32_init.c
+  win32_joystick.c
+  win32_module.c
+  win32_monitor.c
+  win32_thread.c
+  win32_time.c
+  win32_window.c
+  window.c
+  wl_init.c
+  wl_monitor.c
+  wl_window.c
+  x11_init.c
+  x11_monitor.c
+  x11_window.c
+  xkb_unicode.c
+  Generating Code...
+  glfw.vcxproj -> C:\Users\Admin\Desktop\sample_selection_gpu\bin\glfw\Debug\glfw.lib

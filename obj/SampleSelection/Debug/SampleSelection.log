@@ -1,0 +1,5 @@
+﻿  main.cpp
+C:\Users\Admin\Desktop\sample_selection_gpu\3rdparty\stb\stb_image_write.h(776,13): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\Admin\Desktop\sample_selection_gpu\src\main.cpp(224,40): warning C4305: 'argument': truncation from 'double' to 'GLfloat'
+C:\Users\Admin\Desktop\sample_selection_gpu\src\main.cpp(229,51): warning C4267: 'argument': conversion from 'size_t' to 'GLint', possible loss of data
+  SampleSelection.vcxproj -> C:\Users\Admin\Desktop\sample_selection_gpu\bin\SampleSelection\Debug\SampleSelection.exe

@@ -1,0 +1,82 @@
+#version 430 core
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+struct KTuple {
+    int coverList[256];
+    int tuple[8];
+    int score;
+    int selected;
+};
+
+struct JTuple {
+    int tuple[8];
+    int covered;
+};
+
+uniform int jTupleCount;
+uniform int s;
+uniform int j;
+uniform int k;
+
+layout (std430, binding = 1) buffer KTuples
+{
+    KTuple kTuples[];
+};
+
+layout (std430, binding = 2) buffer JTuples
+{
+    JTuple jTuples[];
+};
+
+int IntersectionSize(in JTuple jTuple, in KTuple kTuple)
+{
+    int first1 = 0, first2 = 0;
+    int last1 = j, last2 = k;
+    int result = 0;
+
+    while (first1 < last1 && first2 < last2) {
+        if (jTuple.tuple[first1] < kTuple.tuple[first2]) {
+            ++first1;
+        } else {
+            if (!(kTuple.tuple[first2] < jTuple.tuple[first1])) {
+                ++first1;
+                ++result;
+            } 
+            ++first2;
+        }
+    }
+
+    return result;
+}
+
+void main()
+{
+    /* Reset score */
+    kTuples[gl_GlobalInvocationID.x].score = 0;
+
+    /* If the tuple is already selected */
+    if (kTuples[gl_GlobalInvocationID.x].selected == 1)
+        return;
+
+    /* Index to insert at cover list */
+    int coverListIndex = 0;
+
+    /* For each j tuple */
+    for (int jTupleIndex = 0; jTupleIndex < jTupleCount; ++jTupleIndex) {
+        if (jTuples[jTupleIndex].covered == 0) {
+            int interescSize = IntersectionSize(jTuples[jTupleIndex], kTuples[gl_GlobalInvocationID.x]);  
+            if (interescSize >= s) {
+                ++kTuples[gl_GlobalInvocationID.x].score;
+                /* Append the index of the j tuple to the cover list */
+                kTuples[gl_GlobalInvocationID.x].coverList[coverListIndex++] = jTupleIndex;
+            }
+        }
+    }
+
+    /* Sentinel item */
+    kTuples[gl_GlobalInvocationID.x].coverList[coverListIndex] = -1;
+}
+
+
+
