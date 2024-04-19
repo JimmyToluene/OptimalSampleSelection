@@ -123,7 +123,7 @@ MessageCallback( GLenum source,
 
 int main(void)
 {
-    static int32_t n = 13;
+    static int32_t n = 16;
     static int32_t k = 7;
     static int32_t j = 6;
     static int32_t s = 6;
