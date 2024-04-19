@@ -1,7 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <glm/glm.hpp>
+//#include <glm/glm.hpp>
 
 #include <iostream>
 #include <vector>
@@ -15,10 +15,14 @@
 #include <memory>
 #include <algorithm>
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+//#include <stb_image_write.h>
 
-#define LOG_INFO 0
+#if ENABLE_LOG
+#define LOG_INFO(...) printf(__VA_ARGS__)
+#else
+#define LOG_INFO(...)
+#endif
 
 #define MM_TIME_NOW() std::chrono::high_resolution_clock::now()
 #define MM_TIMEPOINT decltype(MM_TIME_NOW())
@@ -70,7 +74,6 @@ void PrintTuple(int* tuple, uint32_t size)
 // std430
 struct KTuple
 {
-    int32_t coverList[256] = {0};
     int32_t tuple[8] = {0};
     int32_t score = 0;
     int32_t selected = 0;
@@ -104,12 +107,26 @@ std::vector<T> Combinations(uint32_t n, uint32_t k)
     return result;
 }
 
+void 
+MessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+    if (type == GL_DEBUG_TYPE_ERROR) {
+        std::cerr << message << std::endl;
+    }
+}
+
 int main(void)
 {
-    int32_t n = 14;
-    int32_t k = 6;
-    int32_t j = 5;
-    int32_t s = 5;
+    static int32_t n = 13;
+    static int32_t k = 7;
+    static int32_t j = 6;
+    static int32_t s = 6;
 
     /* Init tuples */ 
 
@@ -184,7 +201,7 @@ int main(void)
     }
 
     /* Uniforms */
-    //int32_t kTupleCountLoc = glGetUniformLocation(compProgram, "kTupleCount");
+    int32_t kTupleCountLoc = glGetUniformLocation(compProgram, "kTupleCount");
     //assert(kTupleCountLoc >= 0);
     int32_t jTupleCountLoc = glGetUniformLocation(compProgram, "jTupleCount");
     int32_t sLoc = glGetUniformLocation(compProgram, "s");
@@ -207,10 +224,23 @@ int main(void)
     glNamedBufferData(jTuplesSSBO, jTuples.size() * sizeof(JTuple), jTuples.data(), GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, jTuplesSSBO);
 
+    /* Cover list image */
+    uint32_t coverList;
+    glCreateTextures(GL_TEXTURE_2D, 1, &coverList);
+    glTextureStorage2D(coverList, 1, GL_R8I, kTuples.size(), jTuples.size());
+	glBindImageTexture(0, coverList, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
+
 	assert(glGetError() == 0);
 
+    /* Setup computation */
 	uint32_t workGroupCount = (uint32_t)std::ceilf((float)kTuples.size() / 32);
     std::cout << "Workgroup count: " << workGroupCount << "\n\n";
+
+	std::vector<int32_t> coverListMem(jTuples.size());
+
+    /* Debug */
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback( MessageCallback, 0 );
 
     /* Loop until the user closes the window */
     uint32_t iter = 0;
@@ -221,9 +251,10 @@ int main(void)
         glClearColor(0.1, 0.1, 0.1, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        /* Calculate score for each kTuple on GPU */
+        /* Calculate score for each k-tuple on GPU */
         glUseProgram(compProgram);
         glUniform1i(jTupleCountLoc, jTuples.size());
+        glUniform1i(kTupleCountLoc, kTuples.size());
         glUniform1i(sLoc, s);
         glUniform1i(jLoc, j);
         glUniform1i(kLoc, k);
@@ -231,47 +262,39 @@ int main(void)
         glDispatchCompute(workGroupCount, 1, 1);
         glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-#if LOG_INFO
-		std::cout << " -- iter " << iter++ << " --\n";
-#endif
-
         /* select the tuple with max coverage */
-        KTuple bestKTuple;
+        int32_t bestKTupleIndex = 0;
         {
 			KTuple* result = (KTuple*)glMapNamedBuffer(kTuplesSSBO, GL_READ_WRITE);
 
-            //for (uint32_t i = 0; i < kTuples.size(); ++i) {
-            //    std::cout << result[i].score << ", ";
-            //}
-            //std::cout << std::endl;
-
-			auto maxElem = std::max_element(result, result + kTuples.size(), 
+			auto bestKTuple = std::max_element(result, result + kTuples.size(), 
 				[](const KTuple& lhs, const KTuple& rhs) {
 					return lhs.score < rhs.score; 
 				});
 
-			maxElem->selected = 1;
-            bestKTuple = *maxElem;
+			bestKTuple->selected = 1;
+            bestKTupleIndex = std::distance(result, bestKTuple);
 
-#if LOG_INFO
-			PrintTuple(maxElem->tuple, k);
-#endif
 			glUnmapNamedBuffer(kTuplesSSBO);
         }
 
         /* Actually cover with bestKTuple */
         int32_t allCovered = 1;
         {
+            /* Get the cover list from image */
+            glGetTextureSubImage(coverList, 0, 
+                bestKTupleIndex, 0, 0, 
+                1, coverListMem.size(), 1, 
+                GL_RED_INTEGER, GL_INT, coverListMem.size() * sizeof(int32_t), coverListMem.data());
+
             JTuple* result = (JTuple*)glMapNamedBuffer(jTuplesSSBO, GL_READ_WRITE);
-            for (uint32_t i = 0; bestKTuple.coverList[i] >= 0; ++i) {
-#if LOG_INFO
-                std::cout << bestKTuple.coverList[i] << ", ";
-#endif
-                result[bestKTuple.coverList[i]].covered = 1;
+            for (uint32_t i = 0; i < coverListMem.size(); ++i) {
+                //std::cout << (int)coverListMem[i] << ", ";
+                if (coverListMem[i])
+                    result[i].covered = 1;
             }
-#if LOG_INFO
-            std::cout << std::endl;
-#endif
+            //std::cout << std::endl;
+
             /* Check if all j tuples are covered */
             for (uint32_t i = 0; i < jTuples.size(); ++i) {
                 allCovered &= result[i].covered;
