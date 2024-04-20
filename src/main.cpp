@@ -18,7 +18,7 @@
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //#include <stb_image_write.h>
 
-#define ENABLE_LOG 0
+#define ENABLE_LOG 1
 
 #if ENABLE_LOG
 #define LOG_INFO(...) printf(__VA_ARGS__)
@@ -108,6 +108,33 @@ std::vector<T> Combinations(uint32_t n, uint32_t k)
     return result;
 }
 
+void GetCoverListFromImage(uint32_t image, uint32_t kIndex, std::vector<int32_t>& mem)
+{
+	glGetTextureSubImage(image, 0, 
+		kIndex, 0, 0, 
+		1, mem.size(), 1, 
+		GL_RED_INTEGER, GL_INT, mem.size() * sizeof(int32_t), mem.data());
+}
+
+void GetCoverListFromImageArray(uint32_t image, uint32_t kIndex, uint32_t blockSizeX, uint32_t blockSizeY, uint32_t blockCountX, uint32_t blockCountY, std::vector<int32_t>& mem)
+{
+    // Get the index of the first block
+    uint32_t z0 = kIndex / 4096;
+
+    for (uint32_t z = z0, y = 0, remainedCount = mem.size(); y < blockCountY; z += blockCountX, ++y) {
+        uint32_t offset = y * blockSizeY;
+        uint32_t count = std::min(blockSizeY, remainedCount);
+        //LOG_INFO("%s: z=%u, y=%u, offset=%u, count=%u, mem_size=%u\n", __FUNCTION__, z, y, offset, count, mem.size());
+        glGetTextureSubImage(image, 0,
+            kIndex % 4096, 0, z, 
+            1, count, 1,
+            GL_RED_INTEGER, GL_INT,
+            count * sizeof(int32_t),
+            &mem[offset]);
+        remainedCount -= count;
+    }
+}
+
 void 
 MessageCallback( GLenum source,
                  GLenum type,
@@ -131,10 +158,10 @@ void RemoveAt(T* arr, uint32_t len, uint32_t index)
 
 int main(void)
 {
-    static int32_t n = 16;
+    static int32_t n = 20;
     static int32_t k = 7;
-    static int32_t j = 6;
-    static int32_t s = 5;
+    static int32_t j = 5;
+    static int32_t s = 3;
 
     /* Init tuples */ 
 
@@ -225,6 +252,7 @@ int main(void)
     int32_t sLoc = glGetUniformLocation(compProgram, "s");
     int32_t jLoc = glGetUniformLocation(compProgram, "j");
     int32_t kLoc = glGetUniformLocation(compProgram, "k");
+    int32_t blockCountXLoc = glGetUniformLocation(compProgram, "blockCountX");
     assert(jTupleCountLoc >= 0);
     assert(sLoc >= 0);
     assert(jLoc >= 0);
@@ -243,22 +271,23 @@ int main(void)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, jTuplesSSBO);
 
     /* Cover list image */
-    uint32_t coverList;
-    glCreateTextures(GL_TEXTURE_2D, 1, &coverList);
-    glTextureStorage2D(coverList, 1, GL_R8I, kTuples.size(), jTuples.size());
-	glBindImageTexture(0, coverList, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
+    //uint32_t coverListImage;
+    //glCreateTextures(GL_TEXTURE_2D, 1, &coverListImage);
+    //glTextureStorage2D(coverListImage, 1, GL_R8I, kTuples.size(), jTuples.size());
+	//glBindImageTexture(0, coverListImage, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
 
-    //uint32_t coverListArray;
-    //uint32_t blockSizeX = 512;
-    //uint32_t blockSizeY = 512;
-    //uint32_t blockCountX = (uint32_t)std::ceilf((float)kTuples.size() / blockSizeX);
-    //uint32_t blockCountY = (uint32_t)std::ceilf((float)jTuples.size() / blockSizeY);
-    //uint32_t depth = blockCountX * blockCountY;
-    //std::cout << "Block count X: " << blockCountX << std::endl;
-    //std::cout << "Block count Y: " << blockCountY << std::endl;
-    //glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &coverListArray);
-    //glTextureStorage3D(coverListArray, 1, GL_R8I, blockSizeX, blockSizeY, depth);
-    //glBindImageTexture(1, coverListArray, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
+    uint32_t coverListArray;
+    uint32_t blockSizeX = 4096;
+    uint32_t blockSizeY = 4096;
+    uint32_t blockCountX = (uint32_t)std::ceilf((float)kTuples.size() / blockSizeX);
+    uint32_t blockCountY = (uint32_t)std::ceilf((float)jTuples.size() / blockSizeY);
+    uint32_t depth = blockCountX * blockCountY;
+    std::cout << "Block count X: " << blockCountX << std::endl;
+    std::cout << "Block count Y: " << blockCountY << std::endl;
+    std::cout << "Depth: " << depth << std::endl;
+    glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &coverListArray);
+    glTextureStorage3D(coverListArray, 1, GL_R8I, blockSizeX, blockSizeY, depth);
+    glBindImageTexture(1, coverListArray, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
 
 	assert(glGetError() == 0);
 
@@ -287,7 +316,6 @@ int main(void)
 		/* Setup computation */
 		static constexpr uint32_t localSizeX = 32;
 		uint32_t workGroupCount = (uint32_t)std::ceilf((float)remainedKTupleCount / localSizeX);
-		//std::cout << "Workgroup count: " << workGroupCount << "\n";
         LOG_INFO("Workgroup count: %u\n", workGroupCount);
 
         glDispatchCompute(workGroupCount, 1, 1);
@@ -318,10 +346,8 @@ int main(void)
         /* Actually cover with bestKTuple */
         {
             /* Get the cover list from image */
-            glGetTextureSubImage(coverList, 0, 
-                bestKTupleIndex, 0, 0, 
-                1, coverListMem.size(), 1, 
-                GL_RED_INTEGER, GL_INT, coverListMem.size() * sizeof(int32_t), coverListMem.data());
+            //GetCoverListFromImage(coverListImage, bestKTupleIndex, coverListMem);
+            GetCoverListFromImageArray(coverListArray, bestKTupleIndex, 4096, 4096, blockCountX, blockCountY, coverListMem);
 
             JTuple* resultJTuples = (JTuple*)glMapNamedBuffer(jTuplesSSBO, GL_READ_WRITE);
             for (uint32_t i = 0, indexOffset = 0; i < remainedJTupleCount; ++i) {

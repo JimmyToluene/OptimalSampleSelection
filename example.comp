@@ -2,8 +2,8 @@
 
 layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
-layout (r8i, binding = 0) uniform iimage2D coverList;
-//layout (r8i, binding = 1) uniform iimage2DArray coverListArray;
+//layout (r8i, binding = 0) uniform iimage2D coverList;
+layout (r8i, binding = 1) uniform iimage2DArray coverListArray;
 
 struct KTuple {
     int tuple[8];
@@ -19,6 +19,7 @@ uniform int jTupleCount;
 uniform int s;
 uniform int j;
 uniform int k;
+uniform int blockCountX;
 
 layout (std430, binding = 1) buffer KTuples
 {
@@ -67,8 +68,19 @@ void main()
 
     /* Reset coverList */
     for (int i = 0; i < jTupleCount; ++i) {
-        ivec2 texelCoord = ivec2(gl_GlobalInvocationID.x, i);
-        imageStore(coverList, texelCoord, ivec4(0, 0, 0, 0));
+        //ivec2 texelCoord = ivec2(gl_GlobalInvocationID.x, i);
+        //imageStore(coverList, texelCoord, ivec4(0, 0, 0, 0));
+
+        int x = int(gl_GlobalInvocationID.x / 4096);
+        int y = int(i / 4096);
+        int z = y * blockCountX + x;
+
+        ivec3 texelCoord2 = ivec3(
+            gl_GlobalInvocationID.x % 4096,
+            i % 4096,
+            z);
+
+        imageStore(coverListArray, texelCoord2, ivec4(0, 0, 0, 0));
     }
 
     /* For each j tuple */
@@ -76,9 +88,21 @@ void main()
         int interescSize = IntersectionSize(jTuples[i], kTuples[gl_GlobalInvocationID.x]);  
         if (interescSize >= s) {
             ++kTuples[gl_GlobalInvocationID.x].score;
+
             /* Set the entry of cover list be one */
-            ivec2 texelCoord = ivec2(gl_GlobalInvocationID.x, i);
-            imageStore(coverList, texelCoord, ivec4(1, 0, 0, 0));
+            //ivec2 texelCoord = ivec2(gl_GlobalInvocationID.x, i);
+            //imageStore(coverList, texelCoord, ivec4(1, 0, 0, 0));
+
+            int x = int(gl_GlobalInvocationID.x / 4096);
+            int y = int(i / 4096);
+            int z = y * blockCountX + x;
+
+            ivec3 texelCoord2 = ivec3(
+                gl_GlobalInvocationID.x % 4096,
+                i % 4096,
+                z);
+
+            imageStore(coverListArray, texelCoord2, ivec4(1, 0, 0, 0));
         }
     }
 }
