@@ -3,16 +3,15 @@
 layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout (r8i, binding = 0) uniform iimage2D coverList;
+//layout (r8i, binding = 1) uniform iimage2DArray coverListArray;
 
 struct KTuple {
     int tuple[8];
     int score;
-    int selected;
 };
 
 struct JTuple {
     int tuple[8];
-    int covered;
 };
 
 uniform int kTupleCount;
@@ -63,8 +62,8 @@ void main()
     kTuples[gl_GlobalInvocationID.x].score = 0;
 
     /* If the tuple is already selected, do not recompute */
-    if (kTuples[gl_GlobalInvocationID.x].selected == 1)
-        return;
+    //if (kTuples[gl_GlobalInvocationID.x].selected == 1)
+    //    return;
 
     /* Reset coverList */
     for (int i = 0; i < jTupleCount; ++i) {
@@ -74,14 +73,12 @@ void main()
 
     /* For each j tuple */
     for (int i = 0; i < jTupleCount; ++i) {
-        if (jTuples[i].covered == 0) {
-            int interescSize = IntersectionSize(jTuples[i], kTuples[gl_GlobalInvocationID.x]);  
-            if (interescSize >= s) {
-                ++kTuples[gl_GlobalInvocationID.x].score;
-                /* Set the entry of cover list be one */
-                ivec2 texelCoord = ivec2(gl_GlobalInvocationID.x, i);
-                imageStore(coverList, texelCoord, ivec4(1, 0, 0, 0));
-            }
+        int interescSize = IntersectionSize(jTuples[i], kTuples[gl_GlobalInvocationID.x]);  
+        if (interescSize >= s) {
+            ++kTuples[gl_GlobalInvocationID.x].score;
+            /* Set the entry of cover list be one */
+            ivec2 texelCoord = ivec2(gl_GlobalInvocationID.x, i);
+            imageStore(coverList, texelCoord, ivec4(1, 0, 0, 0));
         }
     }
 }

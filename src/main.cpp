@@ -18,6 +18,8 @@
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //#include <stb_image_write.h>
 
+#define ENABLE_LOG 0
+
 #if ENABLE_LOG
 #define LOG_INFO(...) printf(__VA_ARGS__)
 #else
@@ -76,14 +78,13 @@ struct KTuple
 {
     int32_t tuple[8] = {0};
     int32_t score = 0;
-    int32_t selected = 0;
 };
 
 // std430
 struct JTuple
 {
     int32_t tuple[8] = {0};
-    int32_t covered = 0;
+    //int32_t covered = 0;
 };
 
 template <typename T>
@@ -121,20 +122,33 @@ MessageCallback( GLenum source,
     }
 }
 
+template <typename T>
+void RemoveAt(T* arr, uint32_t len, uint32_t index) 
+{
+    for (uint32_t i = index; i < len - 1; ++i)
+        arr[i] = arr[i + 1];
+}
+
 int main(void)
 {
     static int32_t n = 16;
     static int32_t k = 7;
     static int32_t j = 6;
-    static int32_t s = 6;
+    static int32_t s = 5;
 
     /* Init tuples */ 
 
     auto kTuples = Combinations<KTuple>(n, k); 
     auto jTuples = Combinations<JTuple>(n, j); 
 
-    std::cout << "K tuples count: " << kTuples.size() << std::endl;
-    std::cout << "J tuples count: " << jTuples.size() << std::endl;
+    uint32_t jTupleCount = jTuples.size();
+    uint32_t remainedJTupleCount = jTupleCount;
+    uint32_t remainedKTupleCount = kTuples.size();
+
+    std::vector<KTuple> selectedKTuple;
+
+    std::cout << "k-tuple count: " << remainedKTupleCount << std::endl;
+    std::cout << "j-tuple count: " << jTupleCount << std::endl;
 
     /* Initialize the library */
     GLFWwindow* window;
@@ -160,6 +174,10 @@ int main(void)
         printf("Failed to initialize OpenGL context\n");
         return -1;
     }
+
+    /* Debug */
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback( MessageCallback, 0 );
 
     /***************************************** Quad shader *****************************************/
     int32_t quadVert = LoadShader("quad.vert", GL_VERTEX_SHADER);
@@ -230,17 +248,21 @@ int main(void)
     glTextureStorage2D(coverList, 1, GL_R8I, kTuples.size(), jTuples.size());
 	glBindImageTexture(0, coverList, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
 
+    //uint32_t coverListArray;
+    //uint32_t blockSizeX = 512;
+    //uint32_t blockSizeY = 512;
+    //uint32_t blockCountX = (uint32_t)std::ceilf((float)kTuples.size() / blockSizeX);
+    //uint32_t blockCountY = (uint32_t)std::ceilf((float)jTuples.size() / blockSizeY);
+    //uint32_t depth = blockCountX * blockCountY;
+    //std::cout << "Block count X: " << blockCountX << std::endl;
+    //std::cout << "Block count Y: " << blockCountY << std::endl;
+    //glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &coverListArray);
+    //glTextureStorage3D(coverListArray, 1, GL_R8I, blockSizeX, blockSizeY, depth);
+    //glBindImageTexture(1, coverListArray, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
+
 	assert(glGetError() == 0);
 
-    /* Setup computation */
-	uint32_t workGroupCount = (uint32_t)std::ceilf((float)kTuples.size() / 32);
-    std::cout << "Workgroup count: " << workGroupCount << "\n\n";
-
-	std::vector<int32_t> coverListMem(jTuples.size());
-
-    /* Debug */
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback( MessageCallback, 0 );
+	std::vector<int32_t> coverListMem(jTupleCount);
 
     /* Loop until the user closes the window */
     uint32_t iter = 0;
@@ -253,33 +275,47 @@ int main(void)
 
         /* Calculate score for each k-tuple on GPU */
         glUseProgram(compProgram);
-        glUniform1i(jTupleCountLoc, jTuples.size());
-        glUniform1i(kTupleCountLoc, kTuples.size());
+        glUniform1i(jTupleCountLoc, remainedJTupleCount);
+        glUniform1i(kTupleCountLoc, remainedKTupleCount);
         glUniform1i(sLoc, s);
         glUniform1i(jLoc, j);
         glUniform1i(kLoc, k);
+
+        //std::cout << "\n-- iter " << iter++ << " --\n";
+        LOG_INFO("\n-- iter %u --\n", iter++);
+
+		/* Setup computation */
+		static constexpr uint32_t localSizeX = 32;
+		uint32_t workGroupCount = (uint32_t)std::ceilf((float)remainedKTupleCount / localSizeX);
+		//std::cout << "Workgroup count: " << workGroupCount << "\n";
+        LOG_INFO("Workgroup count: %u\n", workGroupCount);
 
         glDispatchCompute(workGroupCount, 1, 1);
         glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
         /* select the tuple with max coverage */
         int32_t bestKTupleIndex = 0;
+        int32_t bestScore = 0;
         {
-			KTuple* result = (KTuple*)glMapNamedBuffer(kTuplesSSBO, GL_READ_WRITE);
+			KTuple* resultKTuples = (KTuple*)glMapNamedBuffer(kTuplesSSBO, GL_READ_WRITE);
 
-			auto bestKTuple = std::max_element(result, result + kTuples.size(), 
+			auto bestKTuple = std::max_element(resultKTuples, resultKTuples + remainedKTupleCount, 
 				[](const KTuple& lhs, const KTuple& rhs) {
 					return lhs.score < rhs.score; 
 				});
 
-			bestKTuple->selected = 1;
-            bestKTupleIndex = std::distance(result, bestKTuple);
+            /* Move the best tuple to selected  */
+            bestKTupleIndex = std::distance(resultKTuples, bestKTuple);
+            bestScore = bestKTuple->score;
+
+            selectedKTuple.push_back(*bestKTuple);
+            RemoveAt(resultKTuples, remainedKTupleCount--, bestKTupleIndex);
+            LOG_INFO("Remained k-tuple: %u\n", remainedKTupleCount);
 
 			glUnmapNamedBuffer(kTuplesSSBO);
         }
 
         /* Actually cover with bestKTuple */
-        int32_t allCovered = 1;
         {
             /* Get the cover list from image */
             glGetTextureSubImage(coverList, 0, 
@@ -287,25 +323,24 @@ int main(void)
                 1, coverListMem.size(), 1, 
                 GL_RED_INTEGER, GL_INT, coverListMem.size() * sizeof(int32_t), coverListMem.data());
 
-            JTuple* result = (JTuple*)glMapNamedBuffer(jTuplesSSBO, GL_READ_WRITE);
-            for (uint32_t i = 0; i < coverListMem.size(); ++i) {
-                //std::cout << (int)coverListMem[i] << ", ";
-                if (coverListMem[i])
-                    result[i].covered = 1;
+            JTuple* resultJTuples = (JTuple*)glMapNamedBuffer(jTuplesSSBO, GL_READ_WRITE);
+            for (uint32_t i = 0, indexOffset = 0; i < remainedJTupleCount; ++i) {
+                if (coverListMem[i]) {
+                    // Problem: remove invalidates the index
+                    // Each remove shift the index after the point of remove by 1
+                    // The score and number of tuples removed do not match
+                    RemoveAt(resultJTuples, remainedJTupleCount, i - indexOffset++);
+                }
             }
-            //std::cout << std::endl;
+            remainedJTupleCount -= bestScore;
 
-            /* Check if all j tuples are covered */
-            for (uint32_t i = 0; i < jTuples.size(); ++i) {
-                allCovered &= result[i].covered;
-                if (!allCovered)
-                    break;
-            }
+            LOG_INFO("Covered j-tuple: %u\n", bestScore);
+            LOG_INFO("Remained j-tuple: %u\n", remainedJTupleCount);
 
             glUnmapNamedBuffer(jTuplesSSBO);
         }
 
-        if (allCovered) {
+        if (remainedJTupleCount == 0) {
             glfwSetWindowShouldClose(window, true);
         }
 
@@ -318,14 +353,10 @@ int main(void)
 
     /* Print all selected groups */
 	std::cout << " **** RESULT **** \n";
-	KTuple* result = (KTuple*)glMapNamedBuffer(kTuplesSSBO, GL_READ_WRITE);
-    for (uint32_t i = 0, j = 0; i < kTuples.size(); ++i) {
-        if (result[i].selected) {
-            std::cout << j++ << ": ";
-            PrintTuple(result[i].tuple, k);
-        }
+    for (uint32_t i = 0; i < selectedKTuple.size(); ++i) {
+        std::cout << i << ": ";
+        PrintTuple(selectedKTuple[i].tuple, k);
     }
-	glUnmapNamedBuffer(kTuplesSSBO);
 
     float elapsed = MM_TIME_DELTA(start);
     std::cout << "Elapsed time: " << elapsed << "s" << std::endl;
