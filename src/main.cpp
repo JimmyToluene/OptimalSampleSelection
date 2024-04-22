@@ -14,6 +14,7 @@
 #include <cmath>
 #include <memory>
 #include <algorithm>
+#include <random>
 
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //#include <stb_image_write.h>
@@ -108,6 +109,27 @@ std::vector<T> Combinations(uint32_t n, uint32_t k)
     return result;
 }
 
+template <typename T>
+std::vector<T> CombinationsFromArray(const std::vector<int32_t> arr, uint32_t k)
+{
+    std::vector<T> result;
+
+    std::string bitmask(k, 1); // K leading 1's
+    bitmask.resize(arr.size(), 0); // N-K trailing 0's
+ 
+    // print integers and permute bitmask
+    do {
+        result.emplace_back();
+        for (uint32_t i = 0, j = 0; i < arr.size(); ++i) {
+            if (bitmask[i]) {
+                result.back().tuple[j++] = arr[i];
+            } 
+        }
+    } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+
+    return result;
+}
+
 void GetCoverListFromImage(uint32_t image, uint32_t kIndex, std::vector<int32_t>& mem)
 {
 	glGetTextureSubImage(image, 0, 
@@ -156,17 +178,90 @@ void RemoveAt(T* arr, uint32_t len, uint32_t index)
         arr[i] = arr[i + 1];
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
+    static int32_t m = 45;
     static int32_t n = 20;
     static int32_t k = 7;
     static int32_t j = 5;
     static int32_t s = 3;
 
+    std::vector<int32_t> ns;
+
+    /* SampleSelection -r <m> <n> <j> <k> <s> */
+    /* SampleSelection -n <j> <k> <s> <n0> <n1> ... */
+
+    bool useRandomSample = true;
+
+    if (argc < 2) {
+        std::cerr << "Invalid argument\n";
+        std::cerr << "Usage: SampleSelection -r <m> <n> <k> <j> <s> or\n";
+        std::cerr << "       SampleSelection -n <j> <k> <s> <n0> <n1> ... \n";
+        return EXIT_FAILURE;
+    }
+
+    if (!std::strncmp("-n", argv[1], 3)) {
+        j = std::stoi(argv[2]);
+        k = std::stoi(argv[3]);
+        s = std::stoi(argv[4]);
+
+        uint32_t argidx = 5;
+        while (argidx < argc) {
+            ns.push_back(std::stoi(argv[argidx]));
+            ++argidx;
+        }
+
+        if (ns.size() < j) {
+            std::cerr << "Not enough samples (n must be greater or equal than j)\n";
+            return EXIT_FAILURE;
+        }
+
+        std::printf("j,k,s = %i,%i,%i\n", j, k, s);
+        std::cout << "n=(";
+        for (uint32_t i = 0; i < ns.size(); ++i) {
+            std::cout << ns[i];
+            if (i != ns.size() - 1)
+                std::cout << ",";
+        }
+        std::cout << ")\n";
+        useRandomSample = false;
+    }
+    else if (!std::strncmp("-r", argv[1], 3)) {
+        m = std::stoi(argv[2]);
+        n = std::stoi(argv[3]);
+        j = std::stoi(argv[4]);
+        k = std::stoi(argv[5]);
+        s = std::stoi(argv[6]);
+
+        std::printf("m,n,j,k,s = %i,%i,%i,%i,%i\n", m, n, j, k, s);
+    }
+    else {
+        std::cerr << "Invalid option\n";
+        return EXIT_FAILURE;
+    }
+
     /* Init tuples */ 
 
-    auto kTuples = Combinations<KTuple>(n, k); 
-    auto jTuples = Combinations<JTuple>(n, j); 
+    if (!useRandomSample) {
+        /* Use manual input */
+    }
+    else {
+        /* 1..m */
+        std::vector<int32_t> ms;
+        for (uint32_t i = 0; i < m; ++i)
+            ms.push_back(i);
+
+        /* Randomly select n */
+        std::sample(ms.begin(), ms.end(), 
+            std::back_inserter(ns), n,
+            std::mt19937(std::random_device()()));
+
+        for (auto i : ns)
+            std::cout << i << ",";
+    }
+
+	auto kTuples = CombinationsFromArray<KTuple>(ns, k);
+    auto jTuples = CombinationsFromArray<JTuple>(ns, j); 
 
     uint32_t jTupleCount = jTuples.size();
     uint32_t remainedJTupleCount = jTupleCount;
