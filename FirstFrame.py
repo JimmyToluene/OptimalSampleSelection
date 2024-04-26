@@ -3,12 +3,13 @@ import tkinter as tk
 from itertools import combinations
 import os
 import random
-import threading
+import GreedyAlgorithm
 import time
-
+from collections import defaultdict
 class SampleSelectionSystem(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
+        self.GreedyAlgorithm = None
         self.random_combination = None
         self.controller = controller
         self.parameters_info = {
@@ -49,6 +50,27 @@ class SampleSelectionSystem(tk.Frame):
         self.update_entry_states()
         self.setup_listbox_frame(self)
 
+    def update_ui_start(self):
+        # 禁用相关的UI组件，例如按钮、输入框等
+        if hasattr(self, 'action_button'):
+            self.action_button.config(state=tk.DISABLED)
+        if hasattr(self, 'entry_fields'):
+            for entry in self.entry_fields:
+                entry.config(state=tk.DISABLED)
+        # 显示一个进度指示，比如进度条或者加载动画
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.start()  # 假设这是一个进度条组件
+
+    def update_ui_end(self):
+        # 启用相关的UI组件
+        if hasattr(self, 'action_button'):
+            self.action_button.config(state=tk.NORMAL)
+        if hasattr(self, 'entry_fields'):
+            for entry in self.entry_fields:
+                entry.config(state=tk.NORMAL)
+        # 隐藏进度指示
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.stop()  # 假设这是一个进度条组件
     def create_input_field(self, parent, parameter_name, additional_info):
         frame = Frame(parent)
         frame.pack(side=tk.LEFT, padx=10, anchor="w")
@@ -63,14 +85,18 @@ class SampleSelectionSystem(tk.Frame):
     def setup_radio_buttons(self, parent_frame):
         radio_frame = Frame(parent_frame)
         radio_frame.pack(side=tk.LEFT, expand=True, fill='both')
-        Radiobutton(radio_frame, text="Random n", variable=self.radio_selection, value="random", font=("Arial", 10), command=self.update_entry_states).pack(side=tk.LEFT, padx=(10, 20))
-        Radiobutton(radio_frame, text="Input n", variable=self.radio_selection, value="input", font=("Arial", 10), command=self.update_entry_states).pack(side=tk.LEFT, padx=(0, 20))
+        Radiobutton(radio_frame, text="Random n", variable=self.radio_selection, value="random", font=("Arial", 10),
+                    command=self.update_entry_states).pack(side=tk.LEFT, padx=(10, 20))
+        Radiobutton(radio_frame, text="Input n", variable=self.radio_selection, value="input", font=("Arial", 10),
+                    command=self.update_entry_states).pack(side=tk.LEFT, padx=(0, 20))
 
     def setup_action_buttons(self, parent_frame):
         action_frame = Frame(parent_frame)
         action_frame.pack(side=tk.LEFT, expand=True, fill='both')
-        Button(action_frame, text="Store DB", font=("Arial", 10), command=self.save_results).pack(side=tk.LEFT, padx=(10, 20))
-        Button(action_frame, text="Execute", font=("Arial", 10), command=self.execute_action).pack(side=tk.LEFT, padx=(0, 20))
+        Button(action_frame, text="Store DB", font=("Arial", 10), command=self.save_results).pack(side=tk.LEFT,
+                                                                                                  padx=(10, 20))
+        Button(action_frame, text="Execute", font=("Arial", 10), command=self.execute_action).pack(side=tk.LEFT,
+                                                                                                   padx=(0, 20))
         Button(action_frame, text="Delete", font=("Arial", 10)).pack(side=tk.LEFT, padx=(0, 20))
 
     def user_input_entry(self, parent_frame):
@@ -89,6 +115,7 @@ class SampleSelectionSystem(tk.Frame):
         entries_state = "disabled" if self.radio_selection.get() == "input" else "normal"
         self.entries['m'].config(state=entries_state)
         self.entries['n'].config(state=entries_state)
+
     def setup_listbox_frame(self, root):
         listbox_frame = Frame(root)
         listbox_frame.pack(fill='both', expand=True, padx=20, pady=10)
@@ -99,12 +126,13 @@ class SampleSelectionSystem(tk.Frame):
         label_value_input.pack()
         value_input_scrollbar = Scrollbar(value_input_frame)
         value_input_scrollbar.pack(side=tk.RIGHT, fill='y')
-        self.value_input_listbox = Listbox(value_input_frame, yscrollcommand=value_input_scrollbar.set, font=("Arial", 20))
+        self.value_input_listbox = Listbox(value_input_frame, yscrollcommand=value_input_scrollbar.set,
+                                           font=("Arial", 20))
         self.value_input_listbox.pack(side=tk.LEFT, fill='both', expand=True)
         value_input_scrollbar.config(command=self.value_input_listbox.yview)
 
         results_frame = Frame(listbox_frame)
-        results_frame.pack(side=tk.LEFT, fill='both', expand=True, padx=(10,0))
+        results_frame.pack(side=tk.LEFT, fill='both', expand=True, padx=(10, 0))
         label_results = Label(results_frame, text="Results")
         label_results.pack()
         results_scrollbar = Scrollbar(results_frame)
@@ -117,46 +145,13 @@ class SampleSelectionSystem(tk.Frame):
         buttons_frame.pack(side=tk.LEFT, padx=(10, 0))
         print_button = Button(buttons_frame, text="Print", font=("Arial", 10))
         print_button.pack(pady=(0, 10))
-        next_button = Button(buttons_frame, text="Next", font=("Arial", 10), command=lambda: self.controller.show_frame("SecondPage"))
+        next_button = Button(buttons_frame, text="Next", font=("Arial", 10),
+                             command=lambda: self.controller.show_frame("SecondPage"))
         next_button.pack()
-    def find_optimal_k_groups(self,samples, k, j, s):
-        begin = time.time()
-        k_groups = list(combinations(samples, k))
-        j_groups = list(combinations(samples, j))
-        end = time.time()
-        print(end - begin)
-
-        k_groups_chosen = []
-        k_group_score = {}
-        k_group_cover_list = {}
-
-        while j_groups:
-            for k_group in k_groups:
-                k_group_score[k_group] = 0
-                k_group_cover_list[k_group] = []
-                for j_group in j_groups:
-                    if len(set(j_group).intersection(k_group)) >= s:
-                        k_group_score[k_group] += 1
-                        k_group_cover_list[k_group].append(j_group)
-
-            best_k_group = max(k_group_score, key=k_group_score.get)
-            max_score = k_group_score[best_k_group]
-            best_k_groups = [k for (k, v) in k_group_score.items() if v == max_score]
-            rand_best_k_group = random.choice(best_k_groups)
-
-            rand_best_k_group = best_k_groups[0]
-            j_groups = set(j_groups).difference(k_group_cover_list[rand_best_k_group])
-
-            k_group_score.pop(rand_best_k_group)
-            k_groups.remove(rand_best_k_group)
-            k_groups_chosen.append(rand_best_k_group)
-
-
-        return k_groups_chosen
 
     def execute_action(self):
         running_index = 0
-        running_index = running_index+1
+        running_index = running_index + 1
         if self.radio_selection.get() == "input":
             self.value_input_listbox.delete(0, tk.END)
             for i, entry in enumerate(self.user_input_entries, start=1):
@@ -171,9 +166,9 @@ class SampleSelectionSystem(tk.Frame):
                 k = int(self.entries['k'].get())
                 j = int(self.entries['j'].get())
                 s = int(self.entries['s'].get())
-
-                self.chosen_groups = self.find_optimal_k_groups(samples, k, j, s)
-
+                self.update_ui_start()
+                self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(samples, k, j, s)
+                self.update_ui_end()
                 self.results_listbox.delete(0, tk.END)
                 for i, group in enumerate(self.chosen_groups, start=1):
                     self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
@@ -191,12 +186,12 @@ class SampleSelectionSystem(tk.Frame):
             self.random_combination.sort()
 
             index = len(self.random_combination)
-            for index in range(0,index):
-                self.value_input_listbox.insert(tk.END, f"{index+1}st #: {self.random_combination[index]}")
+            for index in range(0, index):
+                self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
             k = int(self.entries['k'].get())
             j = int(self.entries['j'].get())
             s = int(self.entries['s'].get())
-            self.chosen_groups = self.find_optimal_k_groups(self.random_combination, k, j, s)
+            self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(self.random_combination,k,j,s)
 
             self.results_listbox.delete(0, tk.END)
             for i, group in enumerate(self.chosen_groups, start=1):
@@ -228,3 +223,4 @@ class SampleSelectionSystem(tk.Frame):
             os.startfile(f"{self.summary_text}.txt", "print")
         except IOError as e:
             messagebox.showerror("Failure", f"Error saving file: {str(e)}")
+

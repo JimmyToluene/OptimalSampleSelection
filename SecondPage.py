@@ -2,6 +2,9 @@ from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar,
 import tkinter as tk
 import os
 
+import interface
+
+
 class SecondPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -19,8 +22,6 @@ class SecondPage(tk.Frame):
     def init_ui(self):
         message_label = Label(self, text="An Optimal Sample Selection System", font=("Arial", 32))
         message_label.pack(pady=(20, 0))
-
-
 
     def display_file_content(self):
         selected_file = self.file_var.get()
@@ -68,12 +69,12 @@ class SecondPage(tk.Frame):
 
     def setup_filelist_widget(self):
         self.file_frame = Frame(self)
-        self.file_frame.place(x=350,y=230,anchor="center")
+        self.file_frame.place(x=350, y=230, anchor="center")
         self.add_new_column()
 
     def add_new_column(self):
         new_column = Frame(self.file_frame)
-        new_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True,padx=70)
+        new_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=70)
         self.columns.append(new_column)
         self.current_column = new_column
         self.radio_buttons_in_current_column = 0
@@ -90,7 +91,8 @@ class SecondPage(tk.Frame):
             for file_name in added_files:
                 if self.radio_buttons_in_current_column >= 7:
                     self.add_new_column()
-                rb = Radiobutton(self.current_column, text=file_name, variable=self.file_var, value=file_name, anchor="w")
+                rb = Radiobutton(self.current_column, text=file_name, variable=self.file_var, value=file_name,
+                                 anchor="w")
                 rb.pack(fill='x')
                 self.radio_buttons[file_name] = rb
                 self.radio_buttons_in_current_column += 1
@@ -105,9 +107,10 @@ class SecondPage(tk.Frame):
 
         # Schedule next refresh
         self.after(5000, self.refresh_file_list)  # Refresh every 5 seconds
+
     def setup_listbox_frame(self, parent_frame):
         listbox_frame = Frame(parent_frame)
-        listbox_frame.place(x=550,y=450,anchor="center")
+        listbox_frame.place(x=550, y=450, anchor="center")
 
         value_input_frame = Frame(listbox_frame)
         value_input_frame.pack(side=tk.LEFT, fill='both', expand=True)
@@ -115,15 +118,17 @@ class SecondPage(tk.Frame):
         value_input_scrollbar = Scrollbar(value_input_frame)
         value_input_scrollbar.pack(side=tk.RIGHT, fill='y')
 
-        self.value_input_listbox = Listbox(value_input_frame, yscrollcommand=value_input_scrollbar.set, font=("Arial", 20),height=10,width=60)
+        self.value_input_listbox = Listbox(value_input_frame, yscrollcommand=value_input_scrollbar.set,
+                                           font=("Arial", 20), height=10, width=60)
         self.value_input_listbox.pack(side=tk.BOTTOM, fill='both', expand=True)
         value_input_scrollbar.config(command=self.value_input_listbox.yview)
 
         # Adding buttons for preview, refilter, and print operations
         operation_frame = Frame(listbox_frame)
         operation_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=20)
-        Button(operation_frame, text="Previous", command=lambda: self.controller.show_frame("SampleSelectionSystem")).pack(pady=10)
-        Button(operation_frame, text="Refilter", command=lambda: self.controller.show_frame("ThirdPage")).pack(pady=10)
+        Button(operation_frame, text="Previous",
+               command=lambda: self.controller.show_frame("SampleSelectionSystem")).pack(pady=10)
+        Button(operation_frame, text="Refilter", command=lambda: self.refilter_files()).pack(pady=10)
         Button(operation_frame, text="Print", command=self.print_file).pack(pady=10)
 
     def delete_selected_file(self):
@@ -142,8 +147,13 @@ class SecondPage(tk.Frame):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to delete file: {str(e)}")
 
-
     def refilter_files(self):
+        selected_file = self.file_var.get()
+        if not selected_file or selected_file == "No file selected":
+            messagebox.showwarning("Warning", "No file selected")
+            return
+        interface.MainApp.selected_file = selected_file
+        self.controller.show_frame("ThirdPage")
         # Implement functionality to refilter file list based on some criteria
         pass
 
@@ -154,4 +164,3 @@ class SecondPage(tk.Frame):
             messagebox.showinfo("Print", f"Printing {selected_file}")
         else:
             messagebox.showwarning("Warning", "No file selected")
-

@@ -2,6 +2,9 @@
 import tkinter as tk
 from tkinter import Label, Radiobutton, Button, Frame, StringVar
 
+import forthPage
+
+
 class ThirdPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -31,6 +34,7 @@ class ThirdPage(tk.Frame):
         selected_filter = self.filter_var.get()
         if selected_filter == "Define positions and numbers":
             self.controller.show_frame("Page4")
+            forthPage.Page4.value_input_listbox.delete(0, tk.END)
         elif selected_filter == "Define positions and range of numbers":
             self.controller.show_frame("Page5")
         elif selected_filter == "Select positions as fixed numbers":
