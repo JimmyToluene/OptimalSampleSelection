@@ -1,9 +1,10 @@
 from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar, Radiobutton
 import tkinter as tk
 import os
-
+import win32api
+import win32print
+from unipath import Path
 import interface
-
 
 class SecondPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -52,7 +53,7 @@ class SecondPage(tk.Frame):
 
     def setup_action_buttons(self, parent_frame):
         action_frame = Frame(parent_frame)
-        action_frame.pack(pady=30, anchor="center")
+        action_frame.pack(pady=10, anchor="center")
         message_label = Label(action_frame, text="Data Base Resources", font=("Arial", 20)).pack(side=tk.LEFT)
         Button(action_frame, text="Display", command=self.display_file_content).pack(side=tk.LEFT, padx=(100, 20))
         Button(action_frame, text="Delete", command=self.delete_selected_file).pack(side=tk.LEFT, padx=(0, 20))
@@ -110,7 +111,7 @@ class SecondPage(tk.Frame):
 
     def setup_listbox_frame(self, parent_frame):
         listbox_frame = Frame(parent_frame)
-        listbox_frame.place(x=550, y=450, anchor="center")
+        listbox_frame.pack(side=tk.LEFT,padx=(300,100),pady=(170,0))
 
         value_input_frame = Frame(listbox_frame)
         value_input_frame.pack(side=tk.LEFT, fill='both', expand=True)
@@ -159,8 +160,11 @@ class SecondPage(tk.Frame):
 
     def print_file(self):
         # Implement functionality to print the selected file
-        selected_file = self.file_var.get()
+        filename = "database/" + self.file_var.get()
+        selected_file = Path(filename).absolute()
+        print(selected_file)
         if selected_file:
             messagebox.showinfo("Print", f"Printing {selected_file}")
+            win32api.ShellExecute(0, 'print', selected_file, f'/d:"{win32print.GetDefaultPrinter()}"', '.', 0)
         else:
             messagebox.showwarning("Warning", "No file selected")

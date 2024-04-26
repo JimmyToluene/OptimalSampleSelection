@@ -9,11 +9,11 @@ import thirdPage
 
 class MainApp(tk.Tk):
     selected_file = None
-
+    progressbar = None
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Sample Selection System")
-        self.geometry("1920x1080")
+        self.geometry("1440x700")
         # Container setup
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)

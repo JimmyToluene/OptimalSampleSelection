@@ -1,14 +1,24 @@
 from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar, Radiobutton
 import tkinter as tk
-from itertools import combinations
+from tkinter import ttk
 import os
 import random
 import GreedyAlgorithm
 import time
-from collections import defaultdict
+from threading import Thread
+import win32api
+import win32print
+from unipath import Path
+import interface
+
+
 class SampleSelectionSystem(tk.Frame):
+
     def __init__(self, parent, controller):
         super().__init__(parent)
+        self.del_btn = None
+        self.exc_btn = None
+        self.store_btn = None
         self.GreedyAlgorithm = None
         self.random_combination = None
         self.controller = controller
@@ -23,6 +33,12 @@ class SampleSelectionSystem(tk.Frame):
         self.user_input_entries = []
         self.radio_selection = tk.StringVar(value="input")
         self.init_ui()
+        #interface.MainApp.progressbar = ttk.Progressbar(self)
+        #interface.MainApp.progressbar.place(x=30, y=60, width=200)
+
+
+
+
 
     def init_ui(self):
         message_label = Label(self, text="An Optimal Sample Selection System", font=("Arial", 32))
@@ -50,33 +66,40 @@ class SampleSelectionSystem(tk.Frame):
         self.update_entry_states()
         self.setup_listbox_frame(self)
 
+
+
     def update_ui_start(self):
-        # 禁用相关的UI组件，例如按钮、输入框等
-        if hasattr(self, 'action_button'):
-            self.action_button.config(state=tk.DISABLED)
-        if hasattr(self, 'entry_fields'):
-            for entry in self.entry_fields:
-                entry.config(state=tk.DISABLED)
-        # 显示一个进度指示，比如进度条或者加载动画
-        if hasattr(self, 'progress_indicator'):
-            self.progress_indicator.start()  # 假设这是一个进度条组件
+        self.results_listbox.delete(0, tk.END)
+        self.entries['m'].config(state=tk.DISABLED)
+        self.entries['n'].config(state=tk.DISABLED)
+        self.entries['k'].config(state=tk.DISABLED)
+        self.entries['j'].config(state=tk.DISABLED)
+        self.entries['s'].config(state=tk.DISABLED)
+        for entry in self.user_input_entries:
+            entry.config(state=tk.DISABLED)
+        self.store_btn.config(state=tk.DISABLED)
+        self.exc_btn.config(state=tk.DISABLED)
+        self.del_btn.config(state=tk.DISABLED)
+
 
     def update_ui_end(self):
-        # 启用相关的UI组件
-        if hasattr(self, 'action_button'):
-            self.action_button.config(state=tk.NORMAL)
-        if hasattr(self, 'entry_fields'):
-            for entry in self.entry_fields:
-                entry.config(state=tk.NORMAL)
-        # 隐藏进度指示
-        if hasattr(self, 'progress_indicator'):
-            self.progress_indicator.stop()  # 假设这是一个进度条组件
+        self.entries['m'].config(state=tk.NORMAL)
+        self.entries['n'].config(state=tk.NORMAL)
+        self.entries['k'].config(state=tk.NORMAL)
+        self.entries['j'].config(state=tk.NORMAL)
+        self.entries['s'].config(state=tk.NORMAL)
+        for entry in self.user_input_entries:
+            entry.config(state=tk.NORMAL)
+        self.store_btn.config(state=tk.NORMAL)
+        self.exc_btn.config(state=tk.NORMAL)
+        self.del_btn.config(state=tk.NORMAL)
+
     def create_input_field(self, parent, parameter_name, additional_info):
         frame = Frame(parent)
         frame.pack(side=tk.LEFT, padx=10, anchor="w")
         label = Label(frame, text=f"{parameter_name}:", font=("Arial", 10))
         label.pack(side=tk.LEFT)
-        entry = Entry(frame, width=5)
+        entry = Entry(frame, width=7)
         entry.pack(side=tk.LEFT, padx=(5, 2))
         additional_text = Label(frame, text=additional_info, font=("Arial", 10))
         additional_text.pack(side=tk.LEFT)
@@ -93,15 +116,22 @@ class SampleSelectionSystem(tk.Frame):
     def setup_action_buttons(self, parent_frame):
         action_frame = Frame(parent_frame)
         action_frame.pack(side=tk.LEFT, expand=True, fill='both')
-        Button(action_frame, text="Store DB", font=("Arial", 10), command=self.save_results).pack(side=tk.LEFT,
-                                                                                                  padx=(10, 20))
-        Button(action_frame, text="Execute", font=("Arial", 10), command=self.execute_action).pack(side=tk.LEFT,
-                                                                                                   padx=(0, 20))
-        Button(action_frame, text="Delete", font=("Arial", 10)).pack(side=tk.LEFT, padx=(0, 20))
+        self.store_btn = Button(action_frame, text="Store DB", font=("Arial", 10), command=self.save_results)
+        self.store_btn.pack(side=tk.LEFT,padx=(0, 20))
+        self.exc_btn = Button(action_frame, text="Execute", font=("Arial", 10), command=self.Threading)
+        self.exc_btn.pack(side=tk.LEFT,padx=(0, 20))
+        self.del_btn = Button(action_frame, text="Delete", font=("Arial", 10), command=self.delete_button)
+        self.del_btn.pack(side=tk.LEFT, padx=(0, 20))
+
+
+    def delete_button(self):
+        self.value_input_listbox.delete(0,tk.END)
+        self.results_listbox.delete(0, tk.END)
+
 
     def user_input_entry(self, parent_frame):
         for i in range(1, 26):
-            entry = Entry(parent_frame, width=3)
+            entry = Entry(parent_frame, width=5)
             entry.grid(row=0, column=i, padx=2)
             entry.config(state="disabled")
             self.user_input_entries.append(entry)
@@ -143,7 +173,7 @@ class SampleSelectionSystem(tk.Frame):
 
         buttons_frame = Frame(listbox_frame)
         buttons_frame.pack(side=tk.LEFT, padx=(10, 0))
-        print_button = Button(buttons_frame, text="Print", font=("Arial", 10))
+        print_button = Button(buttons_frame, text="Print", font=("Arial", 10),command=self.print_file)
         print_button.pack(pady=(0, 10))
         next_button = Button(buttons_frame, text="Next", font=("Arial", 10),
                              command=lambda: self.controller.show_frame("SecondPage"))
@@ -153,52 +183,121 @@ class SampleSelectionSystem(tk.Frame):
         running_index = 0
         running_index = running_index + 1
         if self.radio_selection.get() == "input":
-            self.value_input_listbox.delete(0, tk.END)
-            for i, entry in enumerate(self.user_input_entries, start=1):
-                input_value = entry.get()
-                if input_value.strip():
-                    self.value_input_listbox.insert(tk.END, f"{i}st #: {input_value}")
-                else:
-                    continue
-
-            try:
-                samples = [int(entry.get()) for entry in self.user_input_entries if entry.get().isdigit()]
-                k = int(self.entries['k'].get())
-                j = int(self.entries['j'].get())
-                s = int(self.entries['s'].get())
-                self.update_ui_start()
-                self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(samples, k, j, s)
-                self.update_ui_end()
-                self.results_listbox.delete(0, tk.END)
-                for i, group in enumerate(self.chosen_groups, start=1):
-                    self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
-                self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
-                self.results_listbox.insert(tk.END, self.summary_text)
-            except Exception as e:
-                print("Error:", str(e))
-
+            self.execute_input(running_index)
         elif self.radio_selection.get() == "random":
-            self.value_input_listbox.delete(0, tk.END)
-            m = int(self.entries['m'].get())
-            n = int(self.entries['n'].get())
-            samples = list(range(1, m + 1))  # Generate a list from 1 to m
-            self.random_combination = random.sample(samples, n)
-            self.random_combination.sort()
+            self.execute_random(running_index)
 
-            index = len(self.random_combination)
-            for index in range(0, index):
-                self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
+    def Threading(self):
+        self.update_ui_start()
+        t1 = Thread(target=self.execute_action)
+        t1.start()
+
+    def execute_input(self,running_index):
+        self.value_input_listbox.delete(0, tk.END)
+        for i, entry in enumerate(self.user_input_entries, start=1):
+            input_value = entry.get()
+            if input_value.strip():
+                self.value_input_listbox.insert(tk.END, f"{i}st #: {input_value}")
+            else:
+                continue
+
+        try:
+            samples = [int(entry.get()) for entry in self.user_input_entries if entry.get().isdigit()]
             k = int(self.entries['k'].get())
             j = int(self.entries['j'].get())
             s = int(self.entries['s'].get())
-            self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(self.random_combination,k,j,s)
-
+            messagebox.showinfo("Executing!", "Please wait for executing!")
+            begin = time.time()
+            self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(samples, k, j, s)
+            end = time.time()
+            messagebox.showinfo("Finished!",f"Total time:{end-begin}")
             self.results_listbox.delete(0, tk.END)
             for i, group in enumerate(self.chosen_groups, start=1):
-                self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, group))})")
-            self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
+                self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
+            self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
             self.results_listbox.insert(tk.END, self.summary_text)
+            self.update_ui_end()
+        except Exception as e:
+            print("Error:", str(e))
+    def execute_random(self,running_index):
+        self.value_input_listbox.delete(0, tk.END)
+        m = int(self.entries['m'].get())
+        n = int(self.entries['n'].get())
+        samples = list(range(1, m + 1))  # Generate a list from 1 to m
+        self.random_combination = random.sample(samples, n)
+        self.random_combination.sort()
 
+        index = len(self.random_combination)
+        for index in range(0, index):
+            self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
+        k = int(self.entries['k'].get())
+        j = int(self.entries['j'].get())
+        s = int(self.entries['s'].get())
+        messagebox.showinfo("Executing!", "Please wait for executing!")
+        begin = time.time()
+        self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(self.random_combination, k, j, s)
+        end = time.time()
+        messagebox.showinfo("Finished!", f"Total time:{end - begin}")
+        self.results_listbox.delete(0, tk.END)
+        for i, group in enumerate(self.chosen_groups, start=1):
+            self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, group))})")
+        self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
+        self.results_listbox.insert(tk.END, self.summary_text)
+        self.update_ui_end()
+
+
+#    def execute_ction(self):
+#        running_index = 0
+#        running_index = running_index + 1
+#        if self.radio_selection.get() == "input":
+#            self.value_input_listbox.delete(0, tk.END)
+#            for i, entry in enumerate(self.user_input_entries, start=1):
+#                input_value = entry.get()
+#                if input_value.strip():
+#                    self.value_input_listbox.insert(tk.END, f"{i}st #: {input_value}")
+#                else:
+#                    continue
+#
+#           try:
+#               samples = [int(entry.get()) for entry in self.user_input_entries if entry.get().isdigit()]
+#                k = int(self.entries['k'].get())
+#               j = int(self.entries['j'].get())
+#                s = int(self.entries['s'].get())
+#                messagebox.showinfo("Executing!", "Please wait for executing!")
+#                self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(samples, k, j, s)
+#                messagebox.showinfo("Finished!")
+#                self.results_listbox.delete(0, tk.END)
+#                for i, group in enumerate(self.chosen_groups, start=1):
+#                    self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
+#                self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
+#                self.results_listbox.insert(tk.END, self.summary_text)
+#            except Exception as e:
+#                print("Error:", str(e))
+#
+#        elif self.radio_selection.get() == "random":
+#            self.value_input_listbox.delete(0, tk.END)
+#            m = int(self.entries['m'].get())
+#            n = int(self.entries['n'].get())
+#            samples = list(range(1, m + 1))  # Generate a list from 1 to m
+#            self.random_combination = random.sample(samples, n)
+#            self.random_combination.sort()
+#
+#            index = len(self.random_combination)
+#            for index in range(0, index):
+#                self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
+#            k = int(self.entries['k'].get())
+#            j = int(self.entries['j'].get())
+#            s = int(self.entries['s'].get())
+#
+#            messagebox.showinfo("Executing!", "Please wait for executing!")
+#            self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(self.random_combination,k,j,s)
+#            messagebox.showinfo("Finished!")
+#            self.results_listbox.delete(0, tk.END)
+#            for i, group in enumerate(self.chosen_groups, start=1):
+#                self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, group))})")
+#            self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
+#           self.results_listbox.insert(tk.END, self.summary_text)
+#
     def save_results(self):
         """Save the results to a file in a directory named 'database'."""
         if not self.chosen_groups or not self.summary_text:
@@ -223,4 +322,37 @@ class SampleSelectionSystem(tk.Frame):
             os.startfile(f"{self.summary_text}.txt", "print")
         except IOError as e:
             messagebox.showerror("Failure", f"Error saving file: {str(e)}")
+
+    def print_file(self):
+        if not self.chosen_groups or not self.summary_text:
+            messagebox.showerror("Error", "No results to save, please perform the operation first.")
+            return
+
+        # Ensure the 'database' directory exists
+        directory = "database"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Construct the file path
+        file_path = os.path.join(directory, f"{self.summary_text}.txt")
+
+        try:
+            with open(file_path, "w") as file:
+                file.write(f"({', '.join(map(str, self.random_combination))})\n")
+                for line in self.chosen_groups:
+                    file.write(f"({', '.join(map(str, line))})\n")
+                file.write(self.summary_text)
+            os.startfile(f"{self.summary_text}.txt", "print")
+        except IOError as e:
+            pass
+
+        # Implement functionality to print the selected file
+        filename = file_path
+        selected_file = Path(filename).absolute()
+        print(selected_file)
+        if selected_file:
+            messagebox.showinfo("Print", f"Printing {selected_file}")
+            win32api.ShellExecute(0, 'print', selected_file, f'/d:"{win32print.GetDefaultPrinter()}"', '.', 0)
+        else:
+            messagebox.showwarning("Warning", "No file selected")
 
