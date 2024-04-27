@@ -1,6 +1,6 @@
+import sys
 from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar, Radiobutton
 import tkinter as tk
-from tkinter import ttk
 import os
 import random
 import GreedyAlgorithm
@@ -9,7 +9,8 @@ from threading import Thread
 import win32api
 import win32print
 from unipath import Path
-import interface
+from concurrent.futures import ProcessPoolExecutor
+import sys
 
 
 class SampleSelectionSystem(tk.Frame):
@@ -187,10 +188,15 @@ class SampleSelectionSystem(tk.Frame):
         elif self.radio_selection.get() == "random":
             self.execute_random(running_index)
 
+
+    def Processing(self):
+        with ProcessPoolExecutor(max_workers=2) as exe:
+            exe.submit(self.execute_action)
+            result = exe.map(self.execute_action)
+
     def Threading(self):
         self.update_ui_start()
-        t1 = Thread(target=self.execute_action)
-        t1.start()
+        Thread(target=self.execute_action).start()
 
     def execute_input(self,running_index):
         self.value_input_listbox.delete(0, tk.END)
@@ -219,6 +225,8 @@ class SampleSelectionSystem(tk.Frame):
             self.update_ui_end()
         except Exception as e:
             print("Error:", str(e))
+
+
     def execute_random(self,running_index):
         self.value_input_listbox.delete(0, tk.END)
         m = int(self.entries['m'].get())
@@ -226,7 +234,6 @@ class SampleSelectionSystem(tk.Frame):
         samples = list(range(1, m + 1))  # Generate a list from 1 to m
         self.random_combination = random.sample(samples, n)
         self.random_combination.sort()
-
         index = len(self.random_combination)
         for index in range(0, index):
             self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
