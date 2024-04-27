@@ -6,17 +6,16 @@ import random
 import GreedyAlgorithm
 import time
 from threading import Thread
-import win32api
-import win32print
-from unipath import Path
-from concurrent.futures import ProcessPoolExecutor
-import sys
+import threading
+
+import easteregg
 
 
 class SampleSelectionSystem(tk.Frame):
 
     def __init__(self, parent, controller):
         super().__init__(parent)
+        self.semaphore = threading.Semaphore(value=1)
         self.del_btn = None
         self.exc_btn = None
         self.store_btn = None
@@ -66,6 +65,8 @@ class SampleSelectionSystem(tk.Frame):
         self.user_input_entry(parent_frame)
         self.update_entry_states()
         self.setup_listbox_frame(self)
+
+
 
 
 
@@ -180,24 +181,27 @@ class SampleSelectionSystem(tk.Frame):
                              command=lambda: self.controller.show_frame("SecondPage"))
         next_button.pack()
 
+    def Threading(self):
+        self.update_ui_start()
+        # Acquire the semaphore before creating the thread
+        self.semaphore.acquire()
+        try:
+            # Create and start the thread
+            t1 = threading.Thread(target=self.execute_action)
+            t1.start()
+        finally:
+            # Release the semaphore after thread creation
+            self.semaphore.release()
     def execute_action(self):
         running_index = 0
         running_index = running_index + 1
         if self.radio_selection.get() == "input":
-            self.execute_input(running_index)
+            self.execute_input(self,running_index)
         elif self.radio_selection.get() == "random":
-            self.execute_random(running_index)
+            self.execute_random(self,running_index)
 
 
-    def Processing(self):
-        with ProcessPoolExecutor(max_workers=2) as exe:
-            exe.submit(self.execute_action)
-            result = exe.map(self.execute_action)
-
-    def Threading(self):
-        self.update_ui_start()
-        Thread(target=self.execute_action).start()
-
+    @staticmethod
     def execute_input(self,running_index):
         self.value_input_listbox.delete(0, tk.END)
         for i, entry in enumerate(self.user_input_entries, start=1):
@@ -214,6 +218,7 @@ class SampleSelectionSystem(tk.Frame):
             s = int(self.entries['s'].get())
             messagebox.showinfo("Executing!", "Please wait for executing!")
             begin = time.time()
+
             self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(samples, k, j, s)
             end = time.time()
             messagebox.showinfo("Finished!",f"Total time:{end-begin}")
@@ -222,27 +227,29 @@ class SampleSelectionSystem(tk.Frame):
                 self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
             self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
             self.results_listbox.insert(tk.END, self.summary_text)
+            time.time(2)
             self.update_ui_end()
         except Exception as e:
             print("Error:", str(e))
 
 
+    @staticmethod
     def execute_random(self,running_index):
         self.value_input_listbox.delete(0, tk.END)
         m = int(self.entries['m'].get())
         n = int(self.entries['n'].get())
         samples = list(range(1, m + 1))  # Generate a list from 1 to m
-        self.random_combination = random.sample(samples, n)
-        self.random_combination.sort()
-        index = len(self.random_combination)
+        random_combination = random.sample(samples, n)
+        random_combination.sort()
+        index = len(random_combination)
         for index in range(0, index):
-            self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
+            self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {random_combination[index]}")
         k = int(self.entries['k'].get())
         j = int(self.entries['j'].get())
         s = int(self.entries['s'].get())
         messagebox.showinfo("Executing!", "Please wait for executing!")
         begin = time.time()
-        self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(self.random_combination, k, j, s)
+        self.chosen_groups = GreedyAlgorithm.main_algorithm(random_combination, k, j, s)
         end = time.time()
         messagebox.showinfo("Finished!", f"Total time:{end - begin}")
         self.results_listbox.delete(0, tk.END)
@@ -251,6 +258,7 @@ class SampleSelectionSystem(tk.Frame):
         self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
         self.results_listbox.insert(tk.END, self.summary_text)
         self.update_ui_end()
+        sys.exit()
 
 
 #    def execute_ction(self):
@@ -354,12 +362,5 @@ class SampleSelectionSystem(tk.Frame):
             pass
 
         # Implement functionality to print the selected file
-        filename = file_path
-        selected_file = Path(filename).absolute()
-        print(selected_file)
-        if selected_file:
-            messagebox.showinfo("Print", f"Printing {selected_file}")
-            win32api.ShellExecute(0, 'print', selected_file, f'/d:"{win32print.GetDefaultPrinter()}"', '.', 0)
-        else:
-            messagebox.showwarning("Warning", "No file selected")
+
 

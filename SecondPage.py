@@ -1,9 +1,7 @@
 from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar, Radiobutton
 import tkinter as tk
 import os
-import win32api
-import win32print
-from unipath import Path
+
 import interface
 
 class SecondPage(tk.Frame):
