@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import messagebox, Entry, Listbox, Frame, Label, Button, Scrollbar, Radiobutton
 import FirstFrame
 import SecondPage
-import easteregg
 import fifthPage
 import forthPage
 import sixthPage
