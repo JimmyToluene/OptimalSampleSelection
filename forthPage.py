@@ -26,9 +26,9 @@ class Page4(tk.Frame):
         line_frames = Frame(self)
         line_frames.pack(fill='x', padx=200, pady=5)
         position_label = Label(line_frames, text="Please input 3 positions:", font=(20)).pack(side=tk.LEFT,padx=(150,10))
-        self.entries[0] = self.create_input_field(line_frames)
         self.entries[1] = self.create_input_field(line_frames)
         self.entries[2] = self.create_input_field(line_frames)
+        self.entries[3] = self.create_input_field(line_frames)
         pos1_frames = Frame(self)
         pos1_frames.pack(fill='x', padx=200, pady=5)
         Radiobutton(pos1_frames, text="Please input the corresponding numbers", font=(20), variable=self.filter_var,value="in").pack()
@@ -88,10 +88,11 @@ class Page4(tk.Frame):
 
     def execute_action(self):
         try:
-            # 获取位置
-            positions = [int(self.entries[i].get()) for i in range(3)]
+            for i in range(1,4):
+                positions = int(self.entries[i].get())
             # 获取对应位置的值
-            values = [self.entries[i + 4].get() for i in range(3)]  # 假设值的输入在索引4, 5, 6
+            for i in range(1,4):
+                values = self.entries[i + 4].get()
         except ValueError:
             messagebox.showerror("Error", "Please enter valid integer positions and numbers.")
             return
@@ -102,30 +103,8 @@ class Page4(tk.Frame):
         elif self.filter_var.get() == "out":
             pass
 
-
     def process_input_positions(self, positions, values):
-        # 读取文件并筛选数据
-        try:
-            filename = interface.MainApp.selected_file
-            file_path = os.path.join('database',filename)
-            with open(file_path, 'r') as file:  # 使用 with 语句安全地打开文件
-                lines = file.readlines()
-            filtered_lines = []
-            for line in lines:
-                parts = line.split()  # 假设每行的数据是空格分隔的
-                print(parts)
-                if len(parts) > max(positions):  # 确保行数据足够
-                    # 检查指定的位置是否有对应的值
-                    if all(parts[positions[i-1]] == values[i] for i in range(3)):
-                        filtered_lines.append(line)
-
-            print(filtered_lines)
-            # 更新 Listbox
-            self.value_input_listbox.delete(0, tk.END)
-            for line in filtered_lines:
-                self.value_input_listbox.insert(tk.END, line.strip())
-        except FileNotFoundError:
-            messagebox.showerror("Error", "File not found")
+        pass
 
     def display_file_content(self):
         selected_file = interface.MainApp.selected_file

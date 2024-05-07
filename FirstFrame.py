@@ -8,7 +8,6 @@ import time
 from threading import Thread
 import threading
 
-import easteregg
 
 
 class SampleSelectionSystem(tk.Frame):
@@ -218,8 +217,7 @@ class SampleSelectionSystem(tk.Frame):
             s = int(self.entries['s'].get())
             messagebox.showinfo("Executing!", "Please wait for executing!")
             begin = time.time()
-
-            self.chosen_groups = GreedyAlgorithm.Greedy.MainAlgorithm(samples, k, j, s)
+            self.chosen_groups = GreedyAlgorithm.main_algorithm(samples, k, j, s)
             end = time.time()
             messagebox.showinfo("Finished!",f"Total time:{end-begin}")
             self.results_listbox.delete(0, tk.END)
@@ -227,7 +225,6 @@ class SampleSelectionSystem(tk.Frame):
                 self.results_listbox.insert(tk.END, f"{i} ({', '.join(map(str, group))})")
             self.summary_text = f"X-{len(samples)}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
             self.results_listbox.insert(tk.END, self.summary_text)
-            time.time(2)
             self.update_ui_end()
         except Exception as e:
             print("Error:", str(e))
@@ -239,17 +236,17 @@ class SampleSelectionSystem(tk.Frame):
         m = int(self.entries['m'].get())
         n = int(self.entries['n'].get())
         samples = list(range(1, m + 1))  # Generate a list from 1 to m
-        random_combination = random.sample(samples, n)
-        random_combination.sort()
-        index = len(random_combination)
+        self.random_combination = random.sample(samples, n)
+        self.random_combination.sort()
+        index = len(self.random_combination)
         for index in range(0, index):
-            self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {random_combination[index]}")
+            self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
         k = int(self.entries['k'].get())
         j = int(self.entries['j'].get())
         s = int(self.entries['s'].get())
         messagebox.showinfo("Executing!", "Please wait for executing!")
         begin = time.time()
-        self.chosen_groups = GreedyAlgorithm.main_algorithm(random_combination, k, j, s)
+        self.chosen_groups = GreedyAlgorithm.main_algorithm(self.random_combination, k, j, s)
         end = time.time()
         messagebox.showinfo("Finished!", f"Total time:{end - begin}")
         self.results_listbox.delete(0, tk.END)
