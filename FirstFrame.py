@@ -327,16 +327,14 @@ class SampleSelectionSystem(tk.Frame):
         # Construct the file path
         file_path = os.path.join(directory, f"{self.summary_text}.txt")
 
-        try:
-            with open(file_path, "w") as file:
-                file.write(f"({', '.join(map(str, self.random_combination))})\n")
-                for line in self.chosen_groups:
-                    file.write(f"({', '.join(map(str, line))})\n")
-                file.write(self.summary_text)
-            messagebox.showinfo("Success", f"Results successfully saved to file: {file_path}")
-            os.startfile(f"{self.summary_text}.txt", "print")
-        except IOError as e:
-            messagebox.showerror("Failure", f"Error saving file: {str(e)}")
+
+        with open(file_path, "w") as file:
+            file.write(f"({', '.join(map(str, self.random_combination))})\n")
+            for line in self.chosen_groups:
+                 file.write(f"({', '.join(map(str, line))})\n")
+            file.write(self.summary_text)
+        messagebox.showinfo("Success", f"Results successfully saved to file: {file_path}")
+        os.startfile(f"{self.summary_text}.txt", "print")
 
     def print_file(self):
         if not self.chosen_groups or not self.summary_text:
