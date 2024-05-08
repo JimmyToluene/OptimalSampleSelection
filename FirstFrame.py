@@ -89,8 +89,7 @@ class SampleSelectionSystem(tk.Frame):
         self.entries['k'].config(state=tk.NORMAL)
         self.entries['j'].config(state=tk.NORMAL)
         self.entries['s'].config(state=tk.NORMAL)
-        for entry in self.user_input_entries:
-            entry.config(state=tk.NORMAL)
+        self.update_entry_states()
         self.store_btn.config(state=tk.NORMAL)
         self.exc_btn.config(state=tk.NORMAL)
         self.del_btn.config(state=tk.NORMAL)
@@ -238,6 +237,8 @@ class SampleSelectionSystem(tk.Frame):
         samples = list(range(1, m + 1))  # Generate a list from 1 to m
         self.random_combination = random.sample(samples, n)
         self.random_combination.sort()
+        mapping = {value: i + 1 for i, value in enumerate(self.random_combination)}
+        reverse_mapping = {i + 1: value for i, value in enumerate(self.random_combination)}
         index = len(self.random_combination)
         for index in range(0, index):
             self.value_input_listbox.insert(tk.END, f"{index + 1}st #: {self.random_combination[index]}")
@@ -246,12 +247,14 @@ class SampleSelectionSystem(tk.Frame):
         s = int(self.entries['s'].get())
         messagebox.showinfo("Executing!", "Please wait for executing!")
         begin = time.time()
-        self.chosen_groups = GreedyAlgorithm.main_algorithm(self.random_combination, k, j, s)
+        mapped_random_combination = [mapping[x] for x in self.random_combination]
+        self.chosen_groups = GreedyAlgorithm.main_algorithm(mapped_random_combination, k, j, s)
         end = time.time()
         messagebox.showinfo("Finished!", f"Total time:{end - begin}")
         self.results_listbox.delete(0, tk.END)
         for i, group in enumerate(self.chosen_groups, start=1):
-            self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, group))})")
+            original_group = tuple(reverse_mapping[val] for val in group)
+            self.results_listbox.insert(tk.END, f"{i}              ({', '.join(map(str, original_group))})")
         self.summary_text = f"{m}-{n}-{k}-{j}-{s}-{running_index}-{len(self.chosen_groups)}"
         self.results_listbox.insert(tk.END, self.summary_text)
         self.update_ui_end()

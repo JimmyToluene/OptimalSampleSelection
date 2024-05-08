@@ -5,6 +5,30 @@ import time
 
 @staticmethod
 def main_algorithm(samples, k, j, s):
+    if j == s:
+        k_groups = set(combinations(samples, k))
+        j_groups = set(combinations(samples, j))
+
+        cover_by = defaultdict(set)
+        for k_group in k_groups:
+            for j_group in j_groups:
+                if set(j_group).issubset(k_group):
+                    cover_by[j_group].add(k_group)
+
+    # 贪心算法选择k-groups
+        k_groups_chosen = set()
+        uncovered_j_groups = set(j_groups)
+        while uncovered_j_groups:
+            best_k_group = max(k_groups, key=lambda x: len(uncovered_j_groups & cover_by[x]))
+            k_groups_chosen.add(best_k_group)
+            uncovered_j_groups -= cover_by[best_k_group]
+
+        print(" ** RESULT ** ")
+        print(*k_groups_chosen, sep='\n')
+        print(f"count = {len(k_groups_chosen)}")
+        print(f"Cover complete; Elapsed time: {elapsed_time}s")
+        return k_groups_chosen
+
     cover = defaultdict(set)
     cover_by = defaultdict(set)
     s_group_generated_k_groups_dp = defaultdict(set)
@@ -30,7 +54,6 @@ def main_algorithm(samples, k, j, s):
         best_k_group = max(cover, key=lambda x: len(cover[x]))
         j_groups = j_groups.difference(cover[best_k_group])
         remove_covered(cover, cover_by, best_k_group)
-        print(best_k_group)
         k_groups.remove(best_k_group)
         cover.pop(best_k_group)
         k_groups_chosen.append(best_k_group)
